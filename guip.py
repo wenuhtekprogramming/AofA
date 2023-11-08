@@ -88,12 +88,17 @@ class ChatLogGraderGUI:
         self.results_text.pack()
 
     def load_file(self):
-        file_path = filedialog.askopenfilename()
+        print("Attempting to load file...")
+        file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+        if not file_path:
+            print("No file was selected.")  # Check if the dialog was closed or canceled
+            return
         if file_path:
-           with open(file_path, 'rb') as f:
+            print(f"File selected: {file_path}")  # Debug print
+            with open(file_path, 'rb') as f:
                 result = chardet.detect(f.read())  # or f.read(100) to read the first 100 bytes
                 encoding = result['encoding']
-           with open(file_path, 'r', encoding=encoding) as file:
+            with open(file_path, 'r', encoding=encoding) as file:
                 chat_log = file.read()
                 self.chat_log = chat_log
 
@@ -104,7 +109,7 @@ class ChatLogGraderGUI:
         kw_lines = self.keywords_text.get('1.0', tk.END).splitlines()
         keywords = {line.split(':')[0].strip(): float(line.split(':')[1].strip()) for line in kw_lines if ':' in line}
         grades = grade_chat_log(chat_entries, known_qs, keywords, disallowed)
-        self.display_results(grades)
+        self.display_results(grades) 
 
     def display_results(self, grades):
         self.results_text.delete('1.0', tk.END)

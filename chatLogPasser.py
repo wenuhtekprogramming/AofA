@@ -37,35 +37,44 @@ def grade_chat_log(chat_entries, known_questions, keywords, disallowed_phrases):
     return scores
 
 # Function to parse chat logs in the described format
-def parse_chat_log_text(text):
+def parse_chat_log(file_path):
+    """
+    Parses the chat log from a text file.
+
+    Args:
+    - file_path: path to the text file containing the chat log.
+
+    Returns:
+    - A list of dictionaries with keys 'timestamp', 'user', and 'message' for each chat entry.
+    """
     chat_entries = []
-    entry_pattern = re.compile(r'\[(\d{2}:\d{2})\] ([^:]+): (.+)')
 
-    # Split the text into lines for processing
-    lines = text.split('\n')
-
-    for line in lines:
-        # Skip empty lines
-        if line.strip() == "":
-            continue
-
-        # Match the line with the pattern to extract data
-        match = entry_pattern.match(line.strip())
-        if match:
-            timestamp, user, message = match.groups()
-            # Skip private messages
-            if "(Privately)" in user:
+    # Regular expression pattern for matching chat log entries
+    # This pattern assumes the format: [HH:MM:SS] Username: Message
+    entry_pattern = re.compile(r'\[(\d{2}:\d{2}:\d{2})\] ([^:]+): (.+)')
+    
+    with open(file_path, 'r',encoding='utf-8') as file:
+        for line in file:
+            # Skip empty lines
+            if line.strip() == "":
                 continue
-
-            # Add the entry to the list
-            chat_entries.append({
-                'timestamp': timestamp,
-                'user': user.strip(),
-                'message': message.strip()
-            })
+            
+            # Match the line with the pattern to extract data
+            match = entry_pattern.match(line.strip())
+            if match:
+                timestamp, user, message = match.groups()
+                # Skip private messages
+                if "(Privately)" in user:
+                    continue
+                
+                # Add the entry to the list
+                chat_entries.append({
+                    'timestamp': timestamp,
+                    'user': user.strip(),
+                    'message': message.strip()
+                })
 
     return chat_entries
-
 # Main CLI function
 def main_cli():
     host_name = input("Enter the host's name: ").strip()
@@ -79,8 +88,16 @@ def main_cli():
     [08:31] John Doe (Privately): Got it, thanks!
     [08:32] Jane Smith: Could it be 9.8 m/s^2 then?
     """
-    chat_log_data = parse_chat_log_text(chat_log_text)
+    file_path = r'E:\New folder\OneDrive - The University of Technology,Jamaica\ChatLogAofA.txt'
 
+# Read the chat log data from the file
+    chat_log_data = parse_chat_log(file_path)
+    for entry in chat_log_data:
+        timestamp = entry['timestamp']
+        user = entry['user']
+        message = entry['message']
+        print(f"{timestamp} - {user}: {message}")
+    
     # Here you would get the known questions, keywords, and disallowed phrases
     # from a file or another source. For the example, they are defined as follows:
     known_qs = {
@@ -89,7 +106,7 @@ def main_cli():
     }
     kw = {
         "capital": 0.5,
-        "France": 0.5,
+        "Paris": 0.5,
         "wrote": 0.5,
         "Macbeth": 0.5,
     }
@@ -100,17 +117,18 @@ def main_cli():
 
     # Grade the chat log
     grades = grade_chat_log(chat_log_data, known_qs, kw, dis_phrases)
-
+    
     # Display the results
     print("\nGraded participation scores:")
     for user, score in grades.items():
         print(f"{user}: {score}")
 
-# main_cli()  # Uncomment this line to run the CLI when executing this script in a local environment
+main_cli() 
+# Uncomment this line to run the CLI when executing this script in a local environment
 
 # Since we can't run interactive input here, let's simulate the main function output
-if __name__ == "__main__":
-    # The following is just for demonstration and will simulate what would happen if the CLI could be run here.
-    # Normally, you would call main_cli() without any arguments and interact with the prompts.
-    print("\n[Simulated CLI Output]")
-    main_cli()
+# if __name__ == "__main__":
+#     # The following is just for demonstration and will simulate what would happen if the CLI could be run here.
+#     # Normally, you would call main_cli() without any arguments and interact with the prompts.
+#     print("\n[Simulated CLI Output]")
+#     main_cli()
