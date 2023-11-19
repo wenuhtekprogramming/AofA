@@ -1,16 +1,6 @@
 import re
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 # Function to check for disallowed phrases
-
-# Function to calculate cosine similarity
-def cosine_similarity_score(user_answer, correct_answer):
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform([user_answer, correct_answer])
-    cosine_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])
-    return cosine_sim[0][0]
-
 def check_disallowed_phrases(message, disallowed_phrases):
     message_lower = message.lower()
     for phrase in disallowed_phrases:
@@ -21,12 +11,13 @@ def check_disallowed_phrases(message, disallowed_phrases):
 
 # Function to match keywords in a message
 def match_keywords(message, known_questions, keywords, graded_question):
-    score = 0.0
+    score = 0
     for question, answer in known_questions.items():
         if(question.lower() in graded_question):
-            score = cosine_similarity_score(message.lower(), answer.lower());# Full points for a correct answer
-            score *= 2;
-            score += sum(keywords[key] for key in keywords if key in message.lower())
+            if answer.lower() in message.lower():
+                score = 2  # Full points for a correct answer
+            if question.lower() in message.lower():
+                score += sum(keywords[key] for key in keywords if key in message.lower())
             return score
     return score  # No match found, no points
 
