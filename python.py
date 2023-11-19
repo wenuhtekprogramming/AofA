@@ -49,7 +49,7 @@ def grade_chat_log(chat_entries, host_name, known_questions, keywords, disallowe
              question=message.lower() #setting question to trigger
              #print("yOOOOOOO "+question)
             continue
-        if(trigger_present == True):
+        if (trigger_present == True):
             if check_disallowed_phrases(message, disallowed_phrases):
                 continue  # Skip the message if it contains only disallowed phrases
             #print("yOOOOOOO "+question)
@@ -63,48 +63,28 @@ def grade_chat_log(chat_entries, host_name, known_questions, keywords, disallowe
 def parse_chat_log(file_path):
     """
     Parses the chat log from a text file.
-
-    Args:
-    - file_path: path to the text file containing the chat log.
-
-    Returns:
-    - A list of dictionaries with keys 'timestamp', 'user', and 'message' for each chat entry.
+    Args: - file_path: path to the text file containing the chat log.
+    Returns: - A list of dictionaries with keys 'timestamp', 'user', and 'message' for each chat entry.
     """
     chat_entries = []
-
     # Regular expression pattern for matching chat log entries
     # This pattern assumes the format: [HH:MM:SS] Username: Message
-    
-    # entry_pattern = re.compile(r'\[(\d{2}:\d{2}:\d{2})\] ([^:]+): (.+)')
-    
-    # entry_pattern = re.compile(r'^- (\w+): (.+)')
-    
     entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)')
     # entry_pattern = re.compile(r'^(.*?): \s*(.+)$')
-    
-    with open(file_path, 'r',encoding='utf-8') as file:
-        for line in file:
-            
-            # Skip empty lines
-            if line.strip() == "":
-                continue
 
-            # Match the line with the pattern to extract data
-            
-            match = entry_pattern.match(line.strip())
+    with open(file_path, 'r', encoding='utf-8') as file:
+        for line in file:
+            if line.strip() == "":  # Skip empty lines
+                continue
+            match = entry_pattern.match(line.strip()) # Match the line with the pattern to extract data
             if match:
                 user, message = match.groups()
-                # Skip private messages
                 if "(Privately)" in user:
-                    continue
-                
-                # Add the entry to the list
-                chat_entries.append({
-                    # 'timestamp': timestamp,
+                    continue # Skip private messages
+                chat_entries.append({ # Add the entry to the list
                     'user': user.strip(),
                     'message': message.strip()
                 })
-      
         return chat_entries
     
 #nMain CLI function
@@ -121,7 +101,7 @@ def main_cli():
         message = entry['message']
         # print(f"{timestamp} - {user}: {message}")
         print(f"{user}: {message}")
-    
+
     # Here you would get the known questions, keywords, and disallowed phrases
     # from a file or another source. For the example, they are defined as follows:
     known_qs = {
@@ -130,11 +110,13 @@ def main_cli():
         "What is the capital of italy?" : "Rome",
         "What is the capital of Spain?" : "Madrid",
     }
+    
     kw = {
         "capital": 0.5,
         "wrote": 0.5,
         "Macbeth": 0.5,
     }
+    
     dis_phrases = [
         "I don't know",
         "Can you repeat the question?",
@@ -165,15 +147,16 @@ def main_cli():
         "I'm clueless",
         "I'm stumped",
         "I'm blank",
-        "Let me guess...",
+        "Let me guess",
         "Random guess",
         "Just guessing",
         "Haven't a clue",
-        "Not sure, but...",
+        "Not sure, but",
         "I'll try anything",
-        "Whatever, it's...",
-        "Don't care, but..."
+        "Whatever, it's",
+        "Don't care, but"
     ]
+    
     triggers = [
         "what is",
         "Next question, what is",
@@ -186,24 +169,26 @@ def main_cli():
     ]
 
     # Grade the chat log
-    grades = grade_chat_log(chat_log_data, host_name, known_qs, kw, dis_phrases, triggers)
-    
+    grades = grade_chat_log(chat_log_data, host_name,
+                            known_qs, kw, dis_phrases, triggers)
+
     # Display the results
     print("\nGraded participation scores:")
     for user, score in grades.items():
         print(f"{user}: {score}")
 
-main_cli() 
-      # if line.strip().startswith(''):
-            #     # Remove the leading '-' and whitespace
-            #     message = line.strip()[2]
-            #     # Extract user from the previous line
-            #     user = chat_entries[-1]['user']
-            #     # Skip private messages
-            #     if user and "(Privately)" in user:
-            #         continue
-            #     # Add the entry to the list
-            #     chat_entries.append({
-            #         'user': user.strip(), 
-            #         'message': message.strip()
-            #     })
+
+main_cli()
+# if line.strip().startswith(''):
+#     # Remove the leading '-' and whitespace
+#     message = line.strip()[2]
+#     # Extract user from the previous line
+#     user = chat_entries[-1]['user']
+#     # Skip private messages
+#     if user and "(Privately)" in user:
+#         continue
+#     # Add the entry to the list
+#     chat_entries.append({
+#         'user': user.strip(),
+#         'message': message.strip()
+#     })
