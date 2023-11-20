@@ -11,6 +11,7 @@ from tkinter import ttk # Importing ttk from tkinter for advanced widgets
 import pandas # Importing pandas for data manipulation
 
 host = "" # Variable to store the host's name
+chat_entries ={}
 
 # Function to calculate cosine similarity score between two text strings
 def cosine_similarity_score(user_answer, correct_answer):
@@ -126,14 +127,21 @@ triggers = [
 ]
 
 # Function to update the score table in the GUI
-def update_score_table(scores):
-    # Clear existing data in the table
-    for i in scoreTable.get_children(): # Removing existing data in the table
-        scoreTable.delete(i)
+def update_score_table():
+    global chat_entries
+    if len(chat_entries) == 0:
+        error.config(text="You must load chat log!") # Displaying error message
+        frame.after(1500, lambda: error.config(text="")) # Clearing error message after 1.5 seconds
+    else:
+        scores = grade_chat_log(chat_entries, host,
+                                        known_qs, kw, dis_phrases, triggers)
+        # Clear existing data in the table
+        for i in scoreTable.get_children(): # Removing existing data in the table
+            scoreTable.delete(i)
 
-    # Add new scores to the table
-    for user, score in scores.items(): # Adding new scores to the table
-        scoreTable.insert("", 'end', values=(user, score))
+        # Add new scores to the table
+        for user, score in scores.items(): # Adding new scores to the table
+            scoreTable.insert("", 'end', values=(user, score))
         
 # Define the combined function
 def add_chat():
@@ -223,8 +231,7 @@ def add_quest():
                     question, answer = line.strip().split(":")
                     known_qs[question.strip()]=answer.strip()
                 # Grade the chat log and update the score table
-                scores = grade_chat_log(chat_entries, host,
-                                    known_qs, kw, dis_phrases, triggers)
+                
 
 # Create the main window for the application
 frame = tk.Tk()
@@ -258,6 +265,9 @@ key_btn.grid(row=7, column=0, pady=10)
 # Create and place a button to add questions
 ques_btn = tk.Button(frame, text="Add Questions", command=add_quest)
 ques_btn.grid(row=7, column=2)
+# Create and place a button to submit 
+submit_btn = tk.Button(frame, text="Submit", command=update_score_table)
+submit_btn.grid(row=8, column=0, columnspan=3)
 # Create and set up a Treeview widget for the score table
 scoreTable = ttk.Treeview(frame, columns=("Name", "Score"), show="headings")
 scoreTable.heading("Name", text="Name")
@@ -267,7 +277,7 @@ scoreTable.column("Score", width=60)
 scoreTable.grid(row=2, column=3, columnspan=2)
 # Create and place a label for displaying errors
 error = tk.Label(frame, text="", fg="red")
-error.grid(row=10, column=0, columnspan=10, sticky="ew")
+error.grid(row=12, column=0, columnspan=10, sticky="ew")
 
 # Run the main loop of the application
 frame.mainloop()
