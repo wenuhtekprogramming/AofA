@@ -5,6 +5,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Function to check for disallowed phrases
 
 # Function to calculate cosine similarity
+#Complexity O(n)
+#https://www.kaggle.com/code/kirankarthikeyan/time-complexity-for-document-similarity-measures#The-Cosine-Similarity
 def cosine_similarity_score(user_answer, correct_answer):
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform([user_answer, correct_answer])
@@ -24,6 +26,7 @@ def match_keywords(message, known_questions, keywords, graded_question):
     score = 0.0
     for question, answer in known_questions.items():
         if(question.lower() in graded_question):
+            #if answer.lower() in message.lower():
             score = cosine_similarity_score(message.lower(), answer.lower());# Full points for a correct answer
             score *= 2;
             score += sum(keywords[key] for key in keywords if key in message.lower())
@@ -31,11 +34,11 @@ def match_keywords(message, known_questions, keywords, graded_question):
     return score  # No match found, no points
 
 # Function to grade the chat log
-def grade_chat_log(chat_entries, host_name, known_questions, keywords, disallowed_phrases, triggers):
+def grade_chat_log(content, host_name, known_questions, keywords, disallowed_phrases, triggers):
     scores = {}
     trigger_present=False
     question=""
-    for entry in chat_entries:
+    for entry in content:
         user = entry['user']
         message = entry['message'].lower()  
         if(user == host_name):
@@ -47,12 +50,11 @@ def grade_chat_log(chat_entries, host_name, known_questions, keywords, disallowe
             trigger_present = any(key.lower() in message for key in triggers)#Check if trigger start is true
             if(trigger_present==True):
              question=message.lower() #setting question to trigger
-             #print("yOOOOOOO "+question)
+             print("yOOOOOOO "+question)
             continue
         if (trigger_present == True):
             if check_disallowed_phrases(message, disallowed_phrases):
                 continue  # Skip the message if it contains only disallowed phrases
-            #print("yOOOOOOO "+question)
             message_score = match_keywords(message, known_questions, keywords,question)
             if user not in scores:
                 scores[user] = 1
@@ -114,7 +116,7 @@ def main_cli():
     kw = {
         "capital": 0.5,
         "wrote": 0.5,
-        "Macbeth": 0.5,
+        "macbeth": 0.5,
     }
     
     dis_phrases = [

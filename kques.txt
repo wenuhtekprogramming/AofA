@@ -1,0 +1,4 @@
+What is the capital of France?:Paris
+Who wrote Macbeth?:Shakespeare
+What is the capital of Italy?:Rome
+What is the capital of Spain?:Madrid

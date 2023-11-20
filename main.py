@@ -5,10 +5,18 @@ import re
 
 from tkinter import filedialog
 from tkinter import scrolledtext
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from tkinter import ttk
 import pandas
 
 host = ""
+
+def cosine_similarity_score(user_answer, correct_answer):
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([user_answer, correct_answer])
+    cosine_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])
+    return cosine_sim[0][0]
 
 def check_disallowed_phrases(message, disallowed_phrases):
     message_lower = message.lower()
@@ -19,55 +27,59 @@ def check_disallowed_phrases(message, disallowed_phrases):
     return False
 
 # Function to match keywords in a message
-def match_keywords(message, known_questions, keywords):
-    score = 0
+def match_keywords(message, known_questions, keywords, graded_question):
+    score = 0.0
     for question, answer in known_questions.items():
-        if answer.lower() in message.lower():
-            return 2  # Full points for a correct answer
-        if question.lower() in message.lower():
-            score = sum(keywords[key]
-                        for key in keywords if key in message.lower())
+        if(question.lower() in graded_question):
+            score = cosine_similarity_score(message.lower(), answer.lower());# Full points for a correct answer
+            score = score * 2;
+            if(score<2):
+                score += sum(keywords[key] for key in keywords if key in message.lower())
             return score
     return score  # No match found, no points
+
 
 # Function to grade the chat log
 def grade_chat_log(content, host_name, known_questions, keywords, disallowed_phrases, triggers):
     scores = {}
-    trigger_present = False
+    trigger_present=False
+    question=""
     for entry in content:
         user = entry['user']
-        message = entry['message'].lower()
-        print(f"Processing message from {user}: {message}")  # Debugging line
-        if (user == host_name):
-            if (trigger_present == True):
-                trigger_present = any(
-                    key.lower() in message for key in triggers)
-                if (trigger_present == True):
-                    trigger_present = False
+        message = entry['message'].lower()  
+        if(user == host_name):
+            if(trigger_present==True): # Check for trigger start is still true
+                trigger_present = any(key.lower() in message for key in triggers) #check for trigger end
+                if(trigger_present==True):
+                    trigger_present=False #Sets the it to end trigger question
                     continue
-            trigger_present = any(key.lower() in message for key in triggers)
+            trigger_present = any(key.lower() in message for key in triggers)#Check if trigger start is true
+            if(trigger_present==True):
+             question=message.lower() #setting question to trigger
+             print("yOOOOOOO "+question)
             continue
         if (trigger_present == True):
+            print("yOOOOOOO "+question)
             if check_disallowed_phrases(message, disallowed_phrases):
                 continue  # Skip the message if it contains only disallowed phrases
-            message_score = match_keywords(message, known_questions, keywords)
+            message_score = match_keywords(message, known_questions, keywords,question)
             if user not in scores:
                 scores[user] = 1
             scores[user] += message_score
     return scores
 
 
-known_qs = {
-    "What is the capital of France?": "Paris",
-    "Who wrote Macbeth?": "Shakespeare",
-}
-
-kw = {
-    "capital": 0.5,
-    "Paris": 0.5,
-    "wrote": 0.5,
-    "Macbeth": 0.5,
-}
+known_qs = {}
+#"What is the capital of France?": "Paris",
+ #   "Who wrote Macbeth?": "Shakespeare",
+#"What is the capital of Italy?" : "Rome",
+#"What is the capital of Spain?" : "Madrid",
+weighting=0.5
+kw = { }
+#  "capital":weighting,
+#     "Paris":weighting,
+#     "wrote":weighting,
+#     "Macbeth":weighting,
 
 dis_phrases = [
     "I don't know",
@@ -106,7 +118,8 @@ dis_phrases = [
     "Not sure, but",
     "I'll try anything",
     "Whatever, it's",
-    "Don't care, but"
+    "Don't care, but",
+    "Mi nuh know"
 ]
 
 triggers = [
@@ -130,90 +143,104 @@ def update_score_table(scores):
     for user, score in scores.items():
         scoreTable.insert("", 'end', values=(user, score))
         # Manually add test data
-    scoreTable.insert("", 'end', values=("Test User", 10))
-    scoreTable.insert("", 'end', values=("Another User", 15))
-
 # Define the combined function
-def add_chat(host_name= None):
-    global chat_entries
-    if host_name is None:
-        host_name = host
-    filepath = filedialog.askopenfilename()
-    if filepath:
-        with open(filepath, 'rb') as f:
-            # Detect the encoding of the file
-            result = chardet.detect(f.read())
-            encoding = result['encoding']
-
-        chat_entries = []
-        entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)')
-
-        with open(filepath, 'r', encoding=encoding) as file:
-            for line in file:
-                if line.strip() == "":  # Skip empty lines
-                    continue
-                # Match the line with the pattern to extract data
-                match = entry_pattern.match(line.strip())
-                if match:
-                    user, message = match.groups()
-                    if "(Privately)" in user:
-                        continue  # Skip private messages
-                    chat_entries.append({  # Add the entry to the list
-                        'user': user.strip(),
-                        'message': message.strip()
-                    })
-
-        # Now, you can use the chat_entries data as needed in your GUI application
-        # For example, you can display it in a text widget
-        text.delete('1.0', tk.END)
-        for entry in chat_entries:
-            text.insert(tk.END, f"User: {entry['user']}\nMessage: {entry['message']}\n\n")
-         # Grade the chat log
-        scores = grade_chat_log(chat_entries, host_name,
-                                known_qs, kw, dis_phrases, triggers)
-
-        for entry in chat_entries:
-            text.insert(tk.END, f"User: {entry['user']}\nMessage: {entry['message']}\n\n")
-        print("Chat Entries:", chat_entries)  # Debugging line
-        update_score_table(scores)
-
-def toggle_fullscreen(event=None):
-    state = not frame.attributes('-fullscreen')
-    frame.attributes('-fullscreen', state)
-    if state:
-        frame.geometry(f"{frame.winfo_screenwidth()}x{frame.winfo_screenheight()}")
-    else:
-        frame.geometry("1200x800")
-
-def add_keywords():
-    filepath = filedialog.askopenfilename()
-    if filepath:
-        label.config(text=f"Selected File: {filepath}")
-        with open(filepath, 'rb') as f:
-            # or f.read(100) to read the first 100 bytes
-            result = chardet.detect(f.read())
-            encoding = result['encoding']
-        with open(filepath, 'r', encoding=encoding) as file:
-            content = file.read()
-            kywrd_text.insert(tk.END, content)
-    
-def on_submit():
+def add_chat():
     global host
-    host = host_field.get()
+    host = host_field.get().strip()
     if host == "":
         error.config(text="You must enter host's name!")
         frame.after(1500, lambda: error.config(text=""))
-    print(host)
+    else:
+        global chat_entries
+        filepath = filedialog.askopenfilename()
+        if filepath:
+            with open(filepath, 'rb') as f:
+                # Detect the encoding of the file
+                result = chardet.detect(f.read())
+                encoding = result['encoding']
+            chat_entries = []
+            entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)')
+            with open(filepath, 'r', encoding=encoding) as file:
+                for line in file:
+                    if line.strip() == "":  # Skip empty lines
+                        continue
+                    # Match the line with the pattern to extract data
+                    match = entry_pattern.match(line.strip())
+                    if match:
+                        user, message = match.groups()
+                        if "(Privately)" in user:
+                            continue  # Skip private messages
+                        chat_entries.append({  # Add the entry to the list
+                            'user': user.strip(),
+                            'message': message.strip()
+                        })
+
+            # Now, you can use the chat_entries data as needed in your GUI application
+            # For example, you can display it in a text widget
+            text.delete('1.0', tk.END)
+            for entry in chat_entries:
+                text.insert(tk.END, f"User: {entry['user']}\nMessage: {entry['message']}\n\n")
+                # Grade the chat log
+            #scores = grade_chat_log(chat_entries, host, known_qs, kw, dis_phrases, triggers)
+
+def add_keywords():
+    global host
+    if host == "":
+        error.config(text="You must enter host's name!")
+        frame.after(1500, lambda: error.config(text=""))
+    else:
+        filepath = filedialog.askopenfilename()
+        if filepath:
+            with open(filepath, 'rb') as f:
+                # or f.read(100) to read the first 100 bytes
+                result = chardet.detect(f.read())
+                encoding = result['encoding']
+            with open(filepath, 'r', encoding=encoding) as file:
+                content = file.read()
+                kywrd_text.delete('1.0', tk.END)
+                kywrd_text.insert(tk.END, content)
+                file.seek(0)
+                for line in file:
+                    if line.strip() == "":  # Skip empty lines
+                            continue
+                    kw[line.strip()] = weighting
+def add_quest():
+    global host
+    if host == "":
+        error.config(text="You must enter host's name!")
+        frame.after(1500, lambda: error.config(text=""))
+    else:
+        filepath = filedialog.askopenfilename()
+        if filepath:
+            with open(filepath, 'rb') as f:
+                # or f.read(100) to read the first 100 bytes
+                result = chardet.detect(f.read())
+                encoding = result['encoding']
+            with open(filepath, 'r', encoding=encoding) as file:
+                content = file.read()
+                kywrd_text.delete('1.0', tk.END)
+                kywrd_text.insert(tk.END, content)
+                file.seek(0)
+                for line in file:
+                    if line.strip() == "":  # Skip empty lines
+                        continue
+                    question, answer = line.strip().split(":")
+                    #print("AFFAF"+question)
+                    #print("sfsfsf"+answer)
+                    known_qs[question.strip()]=answer.strip()
+                scores = grade_chat_log(chat_entries, host,
+                                    known_qs, kw, dis_phrases, triggers)
+                # print(scores)
+                # print(known_qs)
+                # print(kw)
+                # print(chat_entries)
+                # print(host)
+                # update_score_table(scores)
 
 # Create the main frame
 frame = tk.Tk()
 frame.title("Chat Log Analyzer")
-frame.attributes('-fullscreen')
-frame.geometry("800x600")
-
-# Bind the F11 key to toggle full screen
-frame.bind("<F11>", toggle_fullscreen)
-frame.bind("<Escape>", toggle_fullscreen)
+frame.geometry("1000x800")
 
 # Define a font with a specific size
 label_font = tkFont.Font(family="Inter", weight="bold", size=18)
@@ -228,9 +255,6 @@ label3.grid(row=1, column=0)
 host_field = tk.Entry(frame, width=30)
 host_field.grid(row=1, column=1)
 
-submit_btn = tk.Button(frame, text="Submit", command=on_submit)
-submit_btn.grid(row=1, column=2)
-
 text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=60, height=20)
 text.grid(row=2, column=0, rowspan=3, columnspan=3, padx=20)
 
@@ -242,7 +266,10 @@ kywrd_text = scrolledtext.ScrolledText(
 kywrd_text.grid(row=6, column=0, columnspan=3)
 
 key_btn = tk.Button(frame, text="Add Keywords", command=add_keywords)
-key_btn.grid(row=7, column=0, columnspan=3, pady=10)
+key_btn.grid(row=7, column=0, pady=10)
+
+ques_btn = tk.Button(frame, text="Add Questions", command=add_quest)
+ques_btn.grid(row=7, column=2)
 
 scoreTable = ttk.Treeview(frame, columns=("Name", "Score"), show="headings")
 scoreTable.heading("Name", text="Name")
