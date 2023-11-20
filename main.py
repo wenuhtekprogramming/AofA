@@ -12,6 +12,11 @@ import pandas
 
 host = ""
 
+
+def validate_chat_entry(line):
+    entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)')
+    return entry_pattern.match(line.strip()) is not None
+
 def cosine_similarity_score(user_answer, correct_answer):
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform([user_answer, correct_answer])
@@ -145,6 +150,7 @@ def update_score_table(scores):
         # Manually add test data
 # Define the combined function
 def add_chat():
+    error.config(text=f"Place Keyword File [if necessary]  Before question File for Evaluation")
     global host
     host = host_field.get().strip()
     if host == "":
@@ -154,35 +160,41 @@ def add_chat():
         global chat_entries
         filepath = filedialog.askopenfilename()
         if filepath:
-            with open(filepath, 'rb') as f:
-                # Detect the encoding of the file
-                result = chardet.detect(f.read())
-                encoding = result['encoding']
-            chat_entries = []
-            entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)')
-            with open(filepath, 'r', encoding=encoding) as file:
-                for line in file:
-                    if line.strip() == "":  # Skip empty lines
-                        continue
-                    # Match the line with the pattern to extract data
-                    match = entry_pattern.match(line.strip())
-                    if match:
-                        user, message = match.groups()
-                        if "(Privately)" in user:
-                            continue  # Skip private messages
-                        chat_entries.append({  # Add the entry to the list
-                            'user': user.strip(),
-                            'message': message.strip()
-                        })
-
-            # Now, you can use the chat_entries data as needed in your GUI application
-            # For example, you can display it in a text widget
-            text.delete('1.0', tk.END)
-            for entry in chat_entries:
-                text.insert(tk.END, f"User: {entry['user']}\nMessage: {entry['message']}\n\n")
-                # Grade the chat log
-            #scores = grade_chat_log(chat_entries, host, known_qs, kw, dis_phrases, triggers)
-
+            try:
+                with open(filepath, 'rb') as f:
+                    # Detect the encoding of the file
+                    result = chardet.detect(f.read())
+                    encoding = result['encoding']
+                chat_entries = []
+                entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)')
+                with open(filepath, 'r', encoding=encoding) as file:
+                    for line in file:
+                        if not validate_chat_entry(line):
+                            error.config(text="Invalid chat log format.")
+                            return
+                        else:
+                            if line.strip() == "":  # Skip empty lines
+                                continue
+                            # Match the line with the pattern to extract data
+                            match = entry_pattern.match(line.strip())
+                            if match:
+                                user, message = match.groups()
+                                if "(Privately)" in user:
+                                    continue  # Skip private messages
+                                chat_entries.append({  # Add the entry to the list
+                                    'user': user.strip(),
+                                    'message': message.strip()
+                                })
+                # Now, you can use the chat_entries data as needed in your GUI application
+                    # For example, you can display it in a text widget
+                text.delete('1.0', tk.END)
+                for entry in chat_entries:
+                        text.insert(tk.END, f"User: {entry['user']}\nMessage: {entry['message']}\n\n")
+                        # Grade the chat log
+                    #scores = grade_chat_log(chat_entries, host, known_qs, kw, dis_phrases, triggers)
+            except Exception as e:
+                    error.config(text=f"Error reading file: {e}")
+                    return         
 def add_keywords():
     global host
     if host == "":
@@ -191,19 +203,23 @@ def add_keywords():
     else:
         filepath = filedialog.askopenfilename()
         if filepath:
-            with open(filepath, 'rb') as f:
-                # or f.read(100) to read the first 100 bytes
-                result = chardet.detect(f.read())
-                encoding = result['encoding']
-            with open(filepath, 'r', encoding=encoding) as file:
-                content = file.read()
-                kywrd_text.delete('1.0', tk.END)
-                kywrd_text.insert(tk.END, content)
-                file.seek(0)
-                for line in file:
-                    if line.strip() == "":  # Skip empty lines
-                            continue
-                    kw[line.strip()] = weighting
+            try:
+                with open(filepath, 'rb') as f:
+                    # or f.read(100) to read the first 100 bytes
+                    result = chardet.detect(f.read())
+                    encoding = result['encoding']
+                with open(filepath, 'r', encoding=encoding) as file:
+                    content = file.read()
+                    kywrd_text.delete('1.0', tk.END)
+                    kywrd_text.insert(tk.END, content)
+                    file.seek(0)
+                    for line in file:
+                        if line.strip() == "":  # Skip empty lines
+                                continue
+                        kw[line.strip()] = weighting
+            except Exception as e:
+                error.config(text=f"Error reading file: {e}")
+                return
 def add_quest():
     global host
     if host == "":
@@ -212,30 +228,38 @@ def add_quest():
     else:
         filepath = filedialog.askopenfilename()
         if filepath:
-            with open(filepath, 'rb') as f:
-                # or f.read(100) to read the first 100 bytes
-                result = chardet.detect(f.read())
-                encoding = result['encoding']
-            with open(filepath, 'r', encoding=encoding) as file:
-                content = file.read()
-                kywrd_text.delete('1.0', tk.END)
-                kywrd_text.insert(tk.END, content)
-                file.seek(0)
-                for line in file:
-                    if line.strip() == "":  # Skip empty lines
-                        continue
-                    question, answer = line.strip().split(":")
-                    #print("AFFAF"+question)
-                    #print("sfsfsf"+answer)
-                    known_qs[question.strip()]=answer.strip()
-                scores = grade_chat_log(chat_entries, host,
-                                    known_qs, kw, dis_phrases, triggers)
+            try:
+                with open(filepath, 'rb') as f:
+                    # or f.read(100) to read the first 100 bytes
+                    result = chardet.detect(f.read())
+                    encoding = result['encoding']
+                with open(filepath, 'r', encoding=encoding) as file:
+                    content = file.read()
+                    kywrd_text.delete('1.0', tk.END)
+                    kywrd_text.insert(tk.END, content)
+                    file.seek(0)
+                    for line in file:
+                        if ":" not in line:
+                            error.config(text="Invalid question-answer format.")
+                            return
+                        if line.strip() == "":  # Skip empty lines
+                            continue
+                        question, answer = line.strip().split(":")
+                            #print("AFFAF"+question)
+                            #print("sfsfsf"+answer)
+                        known_qs[question.strip()]=answer.strip()
+                        scores = grade_chat_log(chat_entries, host,
+                                            known_qs, kw, dis_phrases, triggers)
+                        update_score_table(scores)
+            except Exception as e:
+                error.config(text=f"Error reading file: {e}")
+                return
                 # print(scores)
                 # print(known_qs)
                 # print(kw)
                 # print(chat_entries)
                 # print(host)
-                # update_score_table(scores)
+              
 
 # Create the main frame
 frame = tk.Tk()
