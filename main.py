@@ -67,7 +67,7 @@ def grade_chat_log(content, host_name, known_questions, keywords, disallowed_phr
             message_score = match_keywords(message, known_questions, keywords,question)# Calculating score for message
             if user not in scores:
                 scores[user] = 1 # Initializing score for user
-            scores[user] += message_score # Adding score to user's total
+            scores[user] += message_score +1 # Adding score to user's total
     return scores # Returning scores dictionary
 
 known_qs = {}
