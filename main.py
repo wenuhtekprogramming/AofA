@@ -8,11 +8,35 @@ from tkinter import scrolledtext # Importing scrolledtext for creating scrollabl
 from sklearn.feature_extraction.text import TfidfVectorizer # Importing TfidfVectorizer for text vectorization
 from sklearn.metrics.pairwise import cosine_similarity # Importing cosine_similarity to calculate similarity between text vectors
 from tkinter import ttk # Importing ttk from tkinter for advanced widgets
-import pandas # Importing pandas for data manipulation
-
+from nltk.corpus import words
+from nltk.tokenize import word_tokenize
+from nltk import pos_tag
+import nltk
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('words')
 host = "" # Variable to store the host's name
 chat_entries ={}
+word_list = set(words.words())
 
+#check if user message is a word 
+def is_real_word(message):
+     tokens = word_tokenize(message) #tokenize words
+     for token in tokens: 
+          if token.lower() in word_list: # Check if True 
+              return True 
+     return False
+ 
+def has_context(message):
+    tokens = word_tokenize(message)
+    if len(tokens) > 3:  # Very short sentences might lack context
+     # Tagging parts of speech
+        tagged_tokens = pos_tag(tokens)  # Corrected here
+        pos_tags = {tag for word, tag in tagged_tokens}  # Corrected here
+    # Check for diversity in parts of speech
+        if len(pos_tags) > 3:
+            return True
+    return False
 # Function to calculate cosine similarity score between two text strings
 def cosine_similarity_score(user_answer, correct_answer):
     vectorizer = TfidfVectorizer() # Initializing TF-IDF Vectorizer
@@ -36,8 +60,10 @@ def match_keywords(message, known_questions, keywords, graded_question):
         if(question.lower() in graded_question):  # Checking if question is part of the graded question
             score = cosine_similarity_score(message.lower(), answer.lower()); # Calculating similarity score for correct answer
             score = score * 2;  # Doubling the score for correct answer
-            if(score<2):  # Adding keyword score if cosine similarity is less than full marks
-                score += sum(keywords[key] for key in keywords if key in message.lower())
+            score += sum(keywords[key] for key in keywords if key in message.lower())
+            if (score <= 0):
+                if(has_context(message) and is_real_word(message)):
+                    score = 1
             return score
     return score  # Returning score
 
@@ -66,8 +92,10 @@ def grade_chat_log(content, host_name, known_questions, keywords, disallowed_phr
                 continue  # Skipping message if it contains disallowed phrases
             message_score = match_keywords(message, known_questions, keywords,question)# Calculating score for message
             if user not in scores:
-                scores[user] = 1 # Initializing score for user
-            scores[user] += message_score +1 # Adding score to user's total
+                scores[user] = message_score  # Initializing score for user
+            else:
+                scores[user] += message_score # Adding score to user's total
+            print(scores)
     return scores # Returning scores dictionary
 
 known_qs = {}
@@ -182,7 +210,7 @@ def add_keywords():
     global host
     # Check if host's name is entered, show error if not
     if host == "":
-        error.config(text="You must enter host's name!")
+        error.config(text="You Load Chat First!")
         frame.after(1500, lambda: error.config(text=""))
     else:
          # Open file dialog to select a file
@@ -210,7 +238,7 @@ def add_keywords():
 def add_quest():
     global host    
     if host == "":# Check if host's name is entered, show error if not
-        error.config(text="You must enter host's name!")
+        error.config(text="You must Load Chat First!")
         frame.after(1500, lambda: error.config(text=""))
     else:
         filepath = filedialog.askopenfilename() # Open file dialog to select a file

@@ -21,18 +21,18 @@
 09:00:15 From Alice: A. Berlin
 09:00:18 From Bob: B. Madrid
 09:00:20 From Charlie: C. Rome
-09:00:22 From David: D. Paris
-09:00:25 From Eve: d
+09:00:22 From David: D. gaggsrg
+09:00:25 From Eve: I am uncertain but the answer may be madrid
 09:00:30 From Arnett Campbell: Thank you for your answers. The correct answer is D. Paris.
 09:01:00 From Arnett Campbell: Next question, what is the capital of Italy?
 09:01:15 From Alice: A. Rome
 09:01:18 From Bob: B. Paris
 09:01:20 From Charlie: C. Madrid
-09:01:22 From David: D. Berlin
-09:01:25 From Eve: a capital
+09:01:22 From David: D. dfsdfsf
+09:01:25 From Eve: a 
 09:01:30 From Arnett Campbell: Thank you for your answers. The correct answer is A. Rome.
 09:02:00 From Arnett Campbell: Last question, what is the capital of Spain?
-09:02:15 From Alice: A. Paris
+09:02:15 From Alice: A. Madrid
 09:02:18 From Bob: B. Rome
 09:02:20 From Charlie: C. Madrid
 09:02:22 From David: D. Berlin
