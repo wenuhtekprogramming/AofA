@@ -19,6 +19,11 @@ host = "" # Variable to store the host's name
 chat_entries ={}
 word_list = set(words.words())
 
+#Validate the File
+def validate_chat_entry(line):
+    entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)')
+    return entry_pattern.match(line.strip()) is not None #check if line matches entry pattern
+
 #check if user message is a word 
 def is_real_word(message):
      tokens = word_tokenize(message) #tokenize words
@@ -26,7 +31,7 @@ def is_real_word(message):
           if token.lower() in word_list: # Check if True 
               return True 
      return False
- 
+
 def has_context(message):
     tokens = word_tokenize(message)
     if len(tokens) > 3:  # Very short sentences might lack context
@@ -182,30 +187,36 @@ def add_chat():
         global chat_entries # Accessing the global variable chat_entries
         filepath = filedialog.askopenfilename() # Opening file dialog to select chat log file
         if filepath:
-            with open(filepath, 'rb') as f:
-                result = chardet.detect(f.read())# Detect the encoding of the file
-                encoding = result['encoding']
-            chat_entries = []   # Initializing list to store chat entries
-            entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)') # Regex pattern to parse chat entries
-            with open(filepath, 'r', encoding=encoding) as file:
-                for line in file:
-                    if line.strip() == "":  # Skip empty lines
-                        continue
-                    match = entry_pattern.match(line.strip()) # Matching line with regex pattern
-                    if match:
-                        user, message = match.groups() # Extracting user and message
-                        if "(Privately)" in user:
-                            continue  # Skip private messages
-                        chat_entries.append({  # Add the entry to the list
-                            'user': user.strip(),
-                            'message': message.strip()
-                        })
+            try:
+                with open(filepath, 'rb') as f:
+                    result = chardet.detect(f.read())# Detect the encoding of the file
+                    encoding = result['encoding']
+                chat_entries = []   # Initializing list to store chat entries
+                entry_pattern = re.compile(r'^\d{2}:\d{2}:\d{2} From (.*?):\s*(.*)') # Regex pattern to parse chat entries
+                with open(filepath, 'r', encoding=encoding) as file:
+                    for line in file:
+                        if not validate_chat_entry(line):
+                            error.config(text="Invalid chat log format.")
+                            return
+                        if line.strip() == "":  # Skip empty lines
+                            continue
+                        match = entry_pattern.match(line.strip()) # Matching line with regex pattern
+                        if match:
+                            user, message = match.groups() # Extracting user and message
+                            if "(Privately)" in user:
+                                continue  # Skip private messages
+                            chat_entries.append({  # Add the entry to the list
+                                'user': user.strip(),
+                                'message': message.strip()
+                            })
 
-            # Updating the GUI to display chat entries
-            text.delete('1.0', tk.END)  # Clearing existing text
-            for entry in chat_entries:
-                text.insert(tk.END, f"User: {entry['user']}\nMessage: {entry['message']}\n\n") # Adding entries to the text widget
-
+                # Updating the GUI to display chat entries
+                text.delete('1.0', tk.END)  # Clearing existing text
+                for entry in chat_entries:
+                    text.insert(tk.END, f"User: {entry['user']}\nMessage: {entry['message']}\n\n") # Adding entries to the text widget
+            except Exception as e:
+                    error.config(text=f"Error reading file: {e}")
+                    return  
 def add_keywords():
     global host
     # Check if host's name is entered, show error if not
@@ -216,25 +227,29 @@ def add_keywords():
          # Open file dialog to select a file
         filepath = filedialog.askopenfilename()
         if filepath:
+            try:
             # Open the file in binary mode and detect its encoding
-            with open(filepath, 'rb') as f:
-                # or f.read(100) to read the first 100 bytes
-                result = chardet.detect(f.read())
-                encoding = result['encoding']
-            # Open the file with the detected encoding
-            with open(filepath, 'r', encoding=encoding) as file:
-                # Read the entire content of the file
-                content = file.read()
-                # Clear the keyword text box and insert the file content
-                kywrd_text.delete('1.0', tk.END)
-                kywrd_text.insert(tk.END, content)
-                # Go back to the start of the file to process each line
-                file.seek(0)
-                 
-                for line in file: # Iterate over each line in the file
-                    if line.strip() == "":  # Skip empty lines
-                        continue
-                    kw[line.strip()] = weighting # Add each keyword from the file to the kw dictionary
+                with open(filepath, 'rb') as f:
+                    # or f.read(100) to read the first 100 bytes
+                    result = chardet.detect(f.read())
+                    encoding = result['encoding']
+                # Open the file with the detected encoding
+                with open(filepath, 'r', encoding=encoding) as file:
+                    # Read the entire content of the file
+                    content = file.read()
+                    # Clear the keyword text box and insert the file content
+                    kywrd_text.delete('1.0', tk.END)
+                    kywrd_text.insert(tk.END, content)
+                    # Go back to the start of the file to process each line
+                    file.seek(0)
+                    
+                    for line in file: # Iterate over each line in the file
+                        if line.strip() == "":  # Skip empty lines
+                            continue
+                        kw[line.strip()] = weighting # Add each keyword from the file to the kw dictionary
+            except Exception as e:
+                error.config(text=f"Error reading file: {e}")
+                return
 def add_quest():
     global host    
     if host == "":# Check if host's name is entered, show error if not
@@ -243,22 +258,26 @@ def add_quest():
     else:
         filepath = filedialog.askopenfilename() # Open file dialog to select a file
         if filepath:
-            with open(filepath, 'rb') as f:  # Detect the encoding of the file
-                result = chardet.detect(f.read())
-                encoding = result['encoding']
-            # Read the file and add questions to the known_qs dictionary
-            with open(filepath, 'r', encoding=encoding) as file:
-                content = file.read()
-                # Update the keyword text box with file content
-                kywrd_text.delete('1.0', tk.END)
-                kywrd_text.insert(tk.END, content)
-                file.seek(0)
-                for line in file: # Loop through each line in the file to process questions and answers
-                    if line.strip() == "":  # Skip empty lines
-                        continue
-                    question, answer = line.strip().split(":")
-                    known_qs[question.strip()]=answer.strip()
-                # Grade the chat log and update the score table
+            try:
+                with open(filepath, 'rb') as f:  # Detect the encoding of the file
+                    result = chardet.detect(f.read())
+                    encoding = result['encoding']
+                # Read the file and add questions to the known_qs dictionary
+                with open(filepath, 'r', encoding=encoding) as file:
+                    content = file.read()
+                    # Update the keyword text box with file content
+                    kywrd_text.delete('1.0', tk.END)
+                    kywrd_text.insert(tk.END, content)
+                    file.seek(0)
+                    for line in file: # Loop through each line in the file to process questions and answers
+                        if line.strip() == "":  # Skip empty lines
+                            continue
+                        question, answer = line.strip().split(":")
+                        known_qs[question.strip()]=answer.strip()
+                    # Grade the chat log and update the score table
+            except Exception as e:
+                    error.config(text=f"Error reading file: {e}")
+                    return
                 
 
 # Create the main window for the application
