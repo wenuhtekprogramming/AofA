@@ -36,8 +36,8 @@ def has_context(message):
     tokens = word_tokenize(message)
     if len(tokens) > 3:  # Very short sentences might lack context
      # Tagging parts of speech
-        tagged_tokens = pos_tag(tokens)  # Corrected here
-        pos_tags = {tag for word, tag in tagged_tokens}  # Corrected here
+        tagged_tokens = pos_tag(tokens)  
+        pos_tags = {tag for word, tag in tagged_tokens} 
     # Check for diversity in parts of speech
         if len(pos_tags) > 3:
             return True
